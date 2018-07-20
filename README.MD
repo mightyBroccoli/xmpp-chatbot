@@ -6,11 +6,11 @@ Do not opperate this bot on foreign servers.
 ### functions
 - query xmpp server software and version [XEP-0092](https://xmpp.org/extensions/xep-0092.html)
 - query xmpp server uptime [XEP-0012](https://xmpp.org/extensions/xep-0012.html)
+- query xmpp server contact addresses [XEP-0157](https://xmpp.org/extensions/xep-0157.html)
 - display help output
 - respond to username being mentioned
 
 ### todo
-- [ ] extract xmpp server contact addresses [XEP-0157](https://xmpp.org/extensions/xep-0157.html) from result
 - [ ] Github Webhook
 
 ### install

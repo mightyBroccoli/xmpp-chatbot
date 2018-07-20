@@ -157,12 +157,16 @@ class QueryBot(slixmpp.ClientXMPP):
 							if field['type'] == 'hidden' and var == 'FORM_TYPE':
 								title = field['value'][0]
 								continue
-							sep = '\n  ' + len(var) * ' '
+							sep = ', '
 							field_value = field.get_value(convert=False)
 							value = sep.join(field_value) if isinstance(field_value, list) else field_value
 							server_info.append('%s: %s' % (var, value))
 
-							self.send_message(mto=msg['from'].bare, mbody=server_info, mtype=msg['type'])
+						text = "contact addresses for %s are" % (line[1])
+						for count in range(len(server_info)):
+							text += "\n" + server_info[count]
+
+						self.send_message(mto=msg['from'].bare, mbody=text, mtype=msg['type'])
 					except NameError:
 						pass
 					except XMPPError:
@@ -221,6 +225,7 @@ if __name__ == '__main__':
 	xmpp.register_plugin('xep_0060')  # PubSub
 	xmpp.register_plugin('xep_0085')  # Chat State Notifications
 	xmpp.register_plugin('xep_0092')  # Software Version
+	xmpp.register_plugin('xep_0128')  # Service Discovery Extensions
 	xmpp.register_plugin('xep_0199')  # XMPP Ping
 
 	# connect and start receiving stanzas
