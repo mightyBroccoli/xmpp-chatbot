@@ -42,7 +42,9 @@ class QueryBot(slixmpp.ClientXMPP):
 		self.get_roster()
 
 		# If a room password is needed, use: password=the_room_password
-		self.plugin['xep_0045'].join_muc(self.room, self.nick, wait=True)
+		for rooms in self.room.split(sep=","):
+			self.plugin['xep_0045'].join_muc(rooms, self.nick, wait=True)
+
 
 	@staticmethod
 	def precheck(line):
