@@ -1,0 +1,13 @@
+ [Unit]
+ 2 Description=SlixXMPP service bot
+ 3 After=network.target ejabberd.service
+ 4
+ 5 [Service]
+ 6 Type=simple
+ 7 ExecStart=/usr/bin/python3 /path/to/main.py
+ 8 Restart=on-failure
+ 9 RestartSec=60s
+10 User=nico
+11
+12 [Install]
+13 WantedBy=multi-user.target
