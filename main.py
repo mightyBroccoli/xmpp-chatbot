@@ -17,12 +17,14 @@ from argparse import ArgumentParser
 from slixmpp.exceptions import XMPPError
 
 from classes.strings import StaticAnswers
+from classes.functions import Modules
 
 
 class QueryBot(slixmpp.ClientXMPP):
 	""" A simple Slixmpp bot with some features """
 	def __init__(self, jid, password, room, nick):
 		slixmpp.ClientXMPP.__init__(self, jid, password)
+		self.ssl_version = ssl.PROTOCOL_TLSv1_2
 
 		self.room = room
 		self.nick = nick
@@ -33,7 +35,7 @@ class QueryBot(slixmpp.ClientXMPP):
 		# register handler to recieve both groupchat and normal message events
 		self.add_event_handler('message', self.message)
 
-	def start(self):
+	def start(self, event):
 		"""
 		Arguments:
 			event -- An empty dictionary. The session_start event does not provide any additional data.
@@ -45,38 +47,29 @@ class QueryBot(slixmpp.ClientXMPP):
 		for rooms in self.room.split(sep=","):
 			self.plugin['xep_0045'].join_muc(rooms, self.nick, wait=True)
 
-	@staticmethod
-	def precheck(line):
+	def validate_domain(self, wordlist, index):
 		"""
-		pre check function
-		- check that keywords are used properly
-		- check that following a keyword a proper jid is following
-		:param line: line from message body
-		:return: true if correct
+		validation method to reduce nonsense connection attemps to unvalid domains
+		:param wordlist: words seperated by " " from the message
+		:param index: keyword index inside the message
+		:return: true if valid
 		"""
-		keywords = {"keywords": ["!help", "!uptime", "!version", "!contact"],
-					"no_arg_keywords": ["!help"]}
-		valid_domain, valid_keyword = False, False
+		# keyword inside the message
+		argument = wordlist[index]
 
-		try:
-			# check for valid keyword in position 0
-			if line[0] in keywords["keywords"]:
-				valid_keyword = True
-			else:
+		# if the argument is not inside the no_arg_keywords target is index + 1
+		if argument not in StaticAnswers().keys(arg='list', keyword="no_arg_keywords"):
+			try:
+				target = wordlist[index + 1]
+				if validators.domain(target):
+					return True
+			except IndexError:
+				# except an IndexError if a keywords is the last word in the message
 				return False
-
-			# catch no arg keywords
-			if line[0] in keywords["no_arg_keywords"]:
-				valid_domain = True
-			# check if domain is valid
-			elif validators.domain(line[1]):
-				valid_domain = True
-			else:
-				return False
-		except IndexError:
-			pass
-
-		return valid_keyword and valid_domain
+		elif argument in StaticAnswers().keys(arg='list', keyword="no_arg_keywords"):
+			return True
+		else:
+			return
 
 	@asyncio.coroutine
 	def message(self, msg):
@@ -85,71 +78,94 @@ class QueryBot(slixmpp.ClientXMPP):
 			msg -- The received message stanza. See the documentation for stanza objects and the Message stanza to see
 					how it may be used.
 		"""
+		# init empty reply list
+		reply = list()
+
 		# catch self messages to prevent self flooding
 		if msg['mucnick'] == self.nick:
 			return
+		elif self.nick in msg['body']:
+			# add pre predefined text to reply list
+			reply.append(StaticAnswers(msg['mucnick']).gen_answer())
 
-		if self.nick in msg['body']:
-			# answer with predefined text when mucnick is used
-			self.send_message(mto=msg['from'].bare, mbody=StaticAnswers(msg['mucnick']).gen_answer(), mtype=msg['type'])
+		# building the queue
+		# double splitting to exclude whitespaces
+		words = " ".join(msg['body'].split()).split(sep=" ")
+		queue = list()
 
-		reply = []
+		# check all words in side the message for possible hits
+		for x in enumerate(words):
+			# check word for match in keywords list
+			for y in StaticAnswers().keys(arg='list'):
+				# if so queue the keyword and the postion in the string
+				if x[1] == y:
+					# only add job to queue if domain is valid
+					if self.validate_domain(words, x[0]):
+						queue.append({str(y): x[0]})
+
+		# queue
+		for job in queue:
+			for key in job:
+				keyword = key
+				index = job[key]
+
+				# hand over the xmpp object, keyword and index to Modules
+				gen = Modules(self, words, keyword, index)
+				reply.append(next(gen))
+
+		# remove None type from list and send all elements
+		if list(filter(None.__ne__, reply)) and reply:
+			self.send_message(mto=msg['from'].bare, mbody="\n".join(reply), mtype=msg['type'])
+
+		#### PRECAUTION TO EXIT GRACEFULLY ####
+		exit(0)
 
 		for line in msg['body'].splitlines():
-			""" split multiline messages into lines to check every line for keywords """
-			# remove double whitespaces and  then split
+			""" split multiline messages into lines to check every line for keywords
+			remove double whitespaces and then split """
 			line = " ".join(line.split()).split(sep=" ")
 
 			if self.precheck(line):
+				keyword = line[0]
 				""" true if keyword and domain are valid """
-				# Display help
-				if line[0] == '!help':
-					""" display help when keyword !help is recieved """
-					reply.append(StaticAnswers().gen_help())
+
 
 				# XEP-0072: Server Version
-				if line[0] == '!version':
+				if keyword == '!version':
 					from classes.functions import Version
 					""" query the server software version of the specified domain, defined by XEP-0092 """
 					try:
-						version = yield from self['xep_0092'].get_version(line[1])
-						reply.append(Version(version, msg, line[1]).reply())
+						version = yield from self['xep_0092'].get_version(target)
+						reply.append(Version(version, msg, target).reply())
 					except (NameError, XMPPError) as error:
 						logger.exception(error)
 						pass
 
 				# XEP-0012: Last Activity
-				if line[0] == '!uptime':
+				if keyword == '!uptime':
 					from classes.functions import LastActivity
 					""" query the server uptime of the specified domain, defined by XEP-0012 """
 					try:
-						last_activity = yield from self['xep_0012'].get_last_activity(line[1])
-						reply.append(LastActivity(last_activity, msg, line[1]).reply())
+						last_activity = yield from self['xep_0012'].get_last_activity(target)
+						reply.append(LastActivity(last_activity, msg, target).reply())
 					except (NameError, XMPPError) as error:
 						logger.exception(error)
 						pass
 
 				# XEP-0157: Contact Addresses for XMPP Services
-				if line[0] == "!contact":
+				if keyword == "!contact":
+					contact = Modules(self, target)
+					print(contact.contact())
+
+					"""
 					from classes.functions import ContactInfo
-					""" query the XEP-0030: Service Discovery and extract contact information """
-					try:
-						contact = yield from self['xep_0030'].get_info(jid=line[1], cached=False)
-						reply.append(ContactInfo(contact, msg, line[1]).reply())
-					except (NameError, XMPPError) as error:
-						logger.exception(error)
-						pass
+					"" query the XEP-0030: Service Discovery and extract contact information ""
+					contact = yield from self['xep_0030'].get_info(jid=line[1], cached=False)
+					for items in contact:
+						reply.append(ContactInfo(items, msg, target).reply())
+					"""
 			else:
 				pass
-
-		# remove None type from list
-		if list(filter(None.__ne__, reply)):
-			self.send_message(mto=msg['from'].bare, mbody="\n".join(reply), mtype=msg['type'])
-
-
-class Modules:
-	def __init__(self, session):
-		self.session = session
 
 
 if __name__ == '__main__':
@@ -178,7 +194,6 @@ if __name__ == '__main__':
 
 	# init the bot and register used slixmpp plugins
 	xmpp = QueryBot(args.jid, args.password, args.room, args.nick)
-	xmpp.ssl_version = ssl.PROTOCOL_TLSv1_2
 	xmpp.register_plugin('xep_0012')  # Last Activity
 	xmpp.register_plugin('xep_0030')  # Service Discovery
 	xmpp.register_plugin('xep_0045')  # Multi-User Chat
@@ -187,7 +202,6 @@ if __name__ == '__main__':
 	xmpp.register_plugin('xep_0092')  # Software Version
 	xmpp.register_plugin('xep_0128')  # Service Discovery Extensions
 	xmpp.register_plugin('xep_0199')  # XMPP Ping
-	session = Modules(xmpp)
 
 	# connect and start receiving stanzas
 	xmpp.connect()
