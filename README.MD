@@ -10,15 +10,12 @@ Do not opperate this bot on foreign servers.
 - display help output
 - respond to username being mentioned
 
-### todo
-- [ ] Github Webhook
-
 ### install
 #### requirements
 - slixmpp
+- logging
+- ssl
 - configparser
-- datetime
-- random
 - validators
 
 #### configuration
@@ -30,8 +27,6 @@ password=super_secret_password
 [MUC]
 rooms=room_to_connect_to@conference.domain.tld,another_room@conference.domain.tld
 nick=mucnickname
-[ADMIN]
-admins=admins ( ! muc nick and not the jid nickname)
 ````
 
 ##### systemd
