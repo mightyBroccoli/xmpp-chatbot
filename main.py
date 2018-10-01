@@ -13,10 +13,12 @@ import ssl
 import validators
 import configparser
 import logging
+
 from argparse import ArgumentParser
 from slixmpp.exceptions import XMPPError
 
 from classes.strings import StaticAnswers
+from functions import Version, LastActivity, ContactInfo, HandleError
 
 
 class QueryBot(slixmpp.ClientXMPP):
@@ -69,6 +71,19 @@ class QueryBot(slixmpp.ClientXMPP):
 		else:
 			return
 
+	def deduplicate(self, reply):
+		"""
+		deduplication method for the result list
+		:param list reply: list containing strings
+		:return: list containing unique strings
+		"""
+		reply_dedup = list()
+		for item in reply:
+			if item not in reply_dedup:
+				reply_dedup.append(item)
+
+		return reply_dedup
+
 	@asyncio.coroutine
 	def message(self, msg):
 		"""
@@ -107,17 +122,35 @@ class QueryBot(slixmpp.ClientXMPP):
 				keyword = key
 				index = job[key]
 
-				from classes.functions import Version
-				try:
-					target = words[index + 1]
-					version = yield from self['xep_0092'].get_version(target)
+				if keyword == '!help':
+					reply.append(StaticAnswers().gen_help())
 
-					return Version(version, msg['body'], target).reply()
-				except (NameError, XMPPError):
+				try:
+					if keyword == '!uptime':
+						target = words[index + 1]
+						last_activity = yield from self['xep_0012'].get_last_activity(target)
+
+						reply.append(LastActivity(last_activity, msg, target).format_values())
+
+					elif keyword == "!version":
+						target = words[index + 1]
+						version = yield from self['xep_0092'].get_version(target)
+
+						reply.append(Version(version, msg, target).format_version())
+
+					elif keyword == "!contact":
+						target = words[index + 1]
+						contact = yield from self['xep_0030'].get_info(jid=target, cached=False)
+
+						reply.append(ContactInfo(contact, msg, target).format_contact())
+				except XMPPError as error:
+					print(error)
+					reply.append(HandleError(error, msg, key, target).build_report())
 					pass
 
 		# remove None type from list and send all elements
 		if list(filter(None.__ne__, reply)) and reply:
+			reply = self.deduplicate(reply)
 			self.send_message(mto=msg['from'].bare, mbody="\n".join(reply), mtype=msg['type'])
 
 
@@ -143,11 +176,9 @@ if __name__ == '__main__':
 	args.password = config.get('Account', 'password')
 	args.room = config.get('MUC', 'rooms')
 	args.nick = config.get('MUC', 'nick')
-	args.admins = config.get('ADMIN', 'admins')
 
 	# init the bot and register used slixmpp plugins
 	xmpp = QueryBot(args.jid, args.password, args.room, args.nick)
-	xmpp.ssl_version = ssl.PROTOCOL_TLSv1_2
 	xmpp.register_plugin('xep_0012')  # Last Activity
 	xmpp.register_plugin('xep_0030')  # Service Discovery
 	xmpp.register_plugin('xep_0045')  # Multi-User Chat
