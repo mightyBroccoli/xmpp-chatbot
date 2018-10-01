@@ -120,6 +120,7 @@ class QueryBot(slixmpp.ClientXMPP):
 
 				if keyword == '!help':
 					reply.append(StaticAnswers().gen_help())
+					continue
 
 				try:
 					target = words[index + 1]
