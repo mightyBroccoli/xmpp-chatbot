@@ -80,17 +80,15 @@ class ContactInfo:
 				field_value = field.get_value(convert=False)
 				value = sep.join(field_value) if isinstance(field_value, list) else field_value
 				server_info.append(' - %s: %s' % (var, value))
-			else:
-				continue
 
-		if server_info.__len__() > 0:
-			text = "contact addresses for %s are" % (self.target)
+		if server_info:
+			text = "contact addresses for %s are" % self.target
 			for count in range(server_info.__len__()):
 				text += "\n" + server_info[count]
-			return text
 		else:
-			text = "%s has no contact addresses configured." % (self.target)
-			return text
+			text = "%s has no contact addresses configured." % self.target
+
+		return text
 
 
 # class handeling XMPPError exeptions

@@ -137,7 +137,6 @@ class QueryBot(slixmpp.ClientXMPP):
 
 				except XMPPError as error:
 					reply.append(HandleError(error, msg, key, target).build_report())
-					pass
 
 		# remove None type from list and send all elements
 		if list(filter(None.__ne__, reply)) and reply:
