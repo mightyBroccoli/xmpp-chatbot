@@ -28,7 +28,7 @@ Do not opperate this bot on foreign servers.
 jid=nick@domain.tld/querybot-0.1
 password=super_secret_password
 [MUC]
-rooms=room_to_connect_to@conference.domain.tld
+rooms=room_to_connect_to@conference.domain.tld,another_room@conference.domain.tld
 nick=mucnickname
 [ADMIN]
 admins=admins ( ! muc nick and not the jid nickname)
