@@ -106,17 +106,14 @@ class QueryBot(slixmpp.ClientXMPP):
 				index = job[key]
 
 				# hand over the xmpp object, keyword and index to Modules
+				from classes.functions import Version
 				try:
-					target = words[index + 1]
-					last_activity = yield from self['xep_0012'].get_last_activity(target)
-					from classes.functions import LastActivity
+					target = self.words[self.index + 1]
+					version = yield from self['xep_0092'].get_version(target)
 
-					reply.append(LastActivity(last_activity, msg, target).format_values())
-				except (NameError, XMPPError, IndexError):
+					return Version(version, self.message, target).reply()
+				except (NameError, XMPPError):
 					pass
-				test = Modules(self, msg, words, keyword, index).start()
-				for x in test:
-					print(x)
 
 		# remove None type from list and send all elements
 		if list(filter(None.__ne__, reply)) and reply:

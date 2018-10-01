@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 import logging
 
@@ -9,21 +10,20 @@ from slixmpp.exceptions import XMPPError, IqError
 # XEP-0072: Server Version
 class Version:
 	def __init__(self, version, msg, target):
-		self.version = version['software_version']['version']
-		self.OS = version['software_version']['os']
-		self.name = version['software_version']['name']
+		self.version = version['software_version']
 		self.nick = msg['mucnick']
 		self.message_type = msg['type']
 		self.target = target
 
-		# call the reply function
-		self.reply()
-
 	def reply(self):
+		version = self.version['software_version']['version']
+		os = self.version['software_version']['os']
+		name = self.version['software_version']['name']
+
 		if self.message_type == "groupchat":
-			text = "%s: %s is running %s version %s on %s" % (self.nick, self.target, self.name, self.version, self.OS)
+			text = "%s: %s is running %s version %s on %s" % (self.nick, self.target, name, version, os)
 		else:
-			text = "%s is running %s version %s on %s" % (self.target, self.name, self.version, self.OS)
+			text = "%s is running %s version %s on %s" % (self.target, name, version, os)
 
 		return text
 
@@ -39,6 +39,7 @@ class LastActivity:
 
 	def format_values(self, granularity=4):
 		seconds = self.last_activity['last_activity']['seconds']
+		uptime = []
 		intervals = (
 			('years', 31536000),  # 60 * 60 * 24 * 365
 			('weeks', 604800),  # 60 * 60 * 24 * 7
@@ -47,8 +48,6 @@ class LastActivity:
 			('minutes', 60),
 			('seconds', 1)
 		)
-		uptime = []
-
 		for name, count in intervals:
 			value = seconds // count
 			if value:
@@ -124,7 +123,7 @@ class Modules:
 				target = self.words[self.index + 1]
 				version = yield from self['xep_0092'].get_version(target)
 
-				return Version(version, self.message, target)
+				return Version(version, self.message, target).reply()
 			except (NameError, XMPPError):
 				pass
 		else:
