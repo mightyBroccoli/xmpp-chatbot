@@ -22,7 +22,6 @@ from classes.functions import Version, LastActivity, ContactInfo, HandleError
 
 
 class QueryBot(slixmpp.ClientXMPP):
-	""" A simple Slixmpp bot with some features """
 	def __init__(self, jid, password, room, nick):
 		slixmpp.ClientXMPP.__init__(self, jid, password)
 		self.ssl_version = ssl.PROTOCOL_TLSv1_2
@@ -37,8 +36,7 @@ class QueryBot(slixmpp.ClientXMPP):
 
 	def start(self, event):
 		"""
-		Arguments:
-			event -- An empty dictionary. The session_start event does not provide any additional data.
+		:param str event -- An empty dictionary. The session_start event does not provide any additional data.
 		"""
 		self.send_presence()
 		self.get_roster()
@@ -49,7 +47,7 @@ class QueryBot(slixmpp.ClientXMPP):
 
 	def validate_domain(self, wordlist, index):
 		"""
-		validation method to reduce nonsense connection attemps to unvalid domains
+		validation method to reduce connection attemps to unvalid domains
 		:param wordlist: words seperated by " " from the message
 		:param index: keyword index inside the message
 		:return: true if valid
@@ -87,9 +85,7 @@ class QueryBot(slixmpp.ClientXMPP):
 	@asyncio.coroutine
 	def message(self, msg):
 		"""
-		Arguments:
-			msg -- The received message stanza. See the documentation for stanza objects and the Message stanza to see
-					how it may be used.
+		:param msg: received message stanza
 		"""
 		# init empty reply list
 		reply = list()
