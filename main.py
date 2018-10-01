@@ -18,7 +18,7 @@ from argparse import ArgumentParser
 from slixmpp.exceptions import XMPPError
 
 from classes.strings import StaticAnswers
-from functions import Version, LastActivity, ContactInfo, HandleError
+from classes.functions import Version, LastActivity, ContactInfo, HandleError
 
 
 class QueryBot(slixmpp.ClientXMPP):
@@ -126,25 +126,20 @@ class QueryBot(slixmpp.ClientXMPP):
 					reply.append(StaticAnswers().gen_help())
 
 				try:
+					target = words[index + 1]
 					if keyword == '!uptime':
-						target = words[index + 1]
 						last_activity = yield from self['xep_0012'].get_last_activity(target)
-
 						reply.append(LastActivity(last_activity, msg, target).format_values())
 
 					elif keyword == "!version":
-						target = words[index + 1]
 						version = yield from self['xep_0092'].get_version(target)
-
 						reply.append(Version(version, msg, target).format_version())
 
 					elif keyword == "!contact":
-						target = words[index + 1]
 						contact = yield from self['xep_0030'].get_info(jid=target, cached=False)
-
 						reply.append(ContactInfo(contact, msg, target).format_contact())
+
 				except XMPPError as error:
-					print(error)
 					reply.append(HandleError(error, msg, key, target).build_report())
 					pass
 
