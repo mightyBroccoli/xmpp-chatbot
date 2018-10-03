@@ -19,6 +19,7 @@ from slixmpp.exceptions import XMPPError
 
 from classes.strings import StaticAnswers
 from classes.functions import Version, LastActivity, ContactInfo, HandleError
+from classes.xep import XEPRequest
 
 
 class QueryBot(slixmpp.ClientXMPP):
@@ -36,7 +37,7 @@ class QueryBot(slixmpp.ClientXMPP):
 
 	def start(self, event):
 		"""
-		:param str event -- An empty dictionary. The session_start event does not provide any additional data.
+		:param event -- An empty dictionary. The session_start event does not provide any additional data.
 		"""
 		self.send_presence()
 		self.get_roster()
@@ -47,27 +48,41 @@ class QueryBot(slixmpp.ClientXMPP):
 
 	def validate_domain(self, wordlist, index):
 		"""
-		validation method to reduce connection attemps to unvalid domains
-		:param wordlist: words seperated by " " from the message
+		validation method to reduce malformed querys and unnecessary connection attempts
+		:param wordlist: words separated by " " from the message
 		:param index: keyword index inside the message
 		:return: true if valid
 		"""
 		# keyword inside the message
 		argument = wordlist[index]
 
-		# if the argument is not inside the no_arg_keywords target is index + 1
-		if argument not in StaticAnswers().keys(arg='list', keyword="no_arg_keywords"):
-			try:
-				target = wordlist[index + 1]
-				if validators.domain(target):
+		# check if argument is in the argument list
+		if argument in StaticAnswers().keys(arg='list'):
+			# if argument uses a domain check for occurence in list and check domain
+			if argument in StaticAnswers().keys(arg='list', keyword='domain_keywords'):
+				try:
+					target = wordlist[index + 1]
+					if validators.domain(target):
+						return True
+				except IndexError:
+					# except an IndexError if a keywords is the last word in the message
+					return False
+
+			# check if number keyword is used if true check if target is assignable
+			elif argument in StaticAnswers().keys(arg='list', keyword='number_keywords'):
+				try:
+					target = wordlist[index + 1]
 					return True
-			except IndexError:
-				# except an IndexError if a keywords is the last word in the message
+				except IndexError:
+					# except an IndexError if target is not assignable
+					return False
+			# check if argument is inside no_arg list
+			elif argument in StaticAnswers().keys(arg='list', keyword="no_arg_keywords"):
+				return True
+			else:
 				return False
-		elif argument in StaticAnswers().keys(arg='list', keyword="no_arg_keywords"):
-			return True
 		else:
-			return
+			return False
 
 	def deduplicate(self, reply):
 		"""
@@ -135,6 +150,9 @@ class QueryBot(slixmpp.ClientXMPP):
 					elif keyword == "!contact":
 						contact = yield from self['xep_0030'].get_info(jid=target, cached=False)
 						reply.append(ContactInfo(contact, msg, target).format_contact())
+
+					elif keyword == "!xep":
+						reply.append(XEPRequest(msg, target).format())
 
 				except XMPPError as error:
 					reply.append(HandleError(error, msg, key, target).build_report())
