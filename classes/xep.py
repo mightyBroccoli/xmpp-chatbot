@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 import requests
-import xml.etree.ElementTree as ET
+import defusedxml.ElementTree as ET
 
 
 class XEPRequest:
@@ -24,9 +24,8 @@ class XEPRequest:
 		try:
 			with open(".etag") as file:
 				local_etag = file.read()
-		except FileExistsError:
+		except FileNotFoundError:
 			local_etag = ""
-			pass
 
 		with requests.Session() as s:
 			s.headers.update({'Accept': 'application/xml'})
