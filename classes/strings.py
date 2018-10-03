@@ -12,7 +12,8 @@ class StaticAnswers:
 			'help':		'!help -- display this text',
 			'version':	'!version domain.tld  -- receive XMPP server version',
 			'uptime':	'!uptime domain.tld -- receive XMPP server uptime',
-			'contact':	'!contact domain.tld -- receive XMPP server contact address info'}
+			'contact':	'!contact domain.tld -- receive XMPP server contact address info',
+			'xep': 		'!xep XEP Number -- recieve information about the specified XEP'}
 		self.possible_answers = {
 			'1': 'I heard that, %s.',
 			'2': 'I am sorry for that %s.',
@@ -22,8 +23,10 @@ class StaticAnswers:
 			'2': 'not a valid target'
 		}
 		self.keywords = {
-			"keywords": ["!help", "!uptime", "!version", "!contact"],
-			"no_arg_keywords": ["!help"]
+			"keywords": ["!help", "!uptime", "!version", "!contact", "!xep"],
+			"domain_keywords": ["!uptime", "!version", "!contact"],
+			"no_arg_keywords": ["!help"],
+			"number_keywords": ["!xep"]
 		}
 
 	def keys(self, arg="", keyword='keywords'):

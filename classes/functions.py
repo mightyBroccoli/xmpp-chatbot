@@ -93,7 +93,7 @@ class ContactInfo:
 
 # class handeling XMPPError exeptions
 class HandleError:
-	def __init__(self, error, msg, key, target):
+	def __init__(self, error, msg, key, target="target missing"):
 		self.error = error
 		self.message = msg
 		self.key = key
