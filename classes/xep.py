@@ -13,7 +13,7 @@ class XEPRequest:
 		self.message_type = msg['type']
 		self.muc_nick = msg['mucnick']
 
-		self.reqxep = str(xepnumber)
+		self.reqxep = int(xepnumber)
 		self.xeplist = None
 		self.acceptedxeps = list()
 
@@ -33,14 +33,14 @@ class XEPRequest:
 			etag = head.headers['etag']
 
 			if local_etag == etag:
-				with open("xeplist.xml", "r") as file:
+				with open("./common/xeplist.xml", "r") as file:
 					self.xeplist = ET.fromstring(file.read())
 			else:
 				r = s.get("https://xmpp.org/extensions/xeplist.xml")
 				r.encoding = 'utf-8'
 				local_etag = head.headers['etag']
 
-				with open("xeplist.xml", "w") as file:
+				with open("./common/xeplist.xml", "w") as file:
 					file.write(r.content.decode())
 					self.xeplist = ET.fromstring(r.content.decode())
 
@@ -61,7 +61,7 @@ class XEPRequest:
 
 		result = list()
 		# if requested number is inside acceptedxeps continou
-		if self.reqxep in self.acceptedxeps:
+		if str(self.reqxep) in self.acceptedxeps:
 			searchstring = ".//*[@accepted='true']/[number='%s']" % self.reqxep
 
 			for item in self.xeplist.findall(searchstring):

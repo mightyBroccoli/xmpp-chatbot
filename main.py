@@ -17,7 +17,7 @@ import logging
 from argparse import ArgumentParser
 from slixmpp.exceptions import XMPPError
 
-from classes.strings import StaticAnswers
+from common.strings import StaticAnswers
 from classes.functions import Version, LastActivity, ContactInfo, HandleError
 from classes.xep import XEPRequest
 
@@ -46,7 +46,7 @@ class QueryBot(slixmpp.ClientXMPP):
 		for rooms in self.room.split(sep=","):
 			self.plugin['xep_0045'].join_muc(rooms, self.nick, wait=True)
 
-	def validate_domain(self, wordlist, index):
+	def validate(self, wordlist, index):
 		"""
 		validation method to reduce malformed querys and unnecessary connection attempts
 		:param wordlist: words separated by " " from the message
@@ -71,8 +71,8 @@ class QueryBot(slixmpp.ClientXMPP):
 			# check if number keyword is used if true check if target is assignable
 			elif argument in StaticAnswers().keys(arg='list', keyword='number_keywords'):
 				try:
-					target = wordlist[index + 1]
-					return True
+					if wordlist[index + 1]:
+						return True
 				except IndexError:
 					# except an IndexError if target is not assignable
 					return False
@@ -124,27 +124,26 @@ class QueryBot(slixmpp.ClientXMPP):
 				# if so queue the keyword and the postion in the string
 				if x[1] == y:
 					# only add job to queue if domain is valid
-					if self.validate_domain(words, x[0]):
+					if self.validate(words, x[0]):
 						queue.append({str(y): x[0]})
 
 		# queue
 		for job in queue:
-			for key in job:
-				keyword = key
-				index = job[key]
+			for keyword in job:
+				index = job[keyword]
 
 				if keyword == '!help':
 					reply.append(StaticAnswers().gen_help())
 					continue
 
+				target = words[index + 1]
 				try:
-					target = words[index + 1]
 					if keyword == '!uptime':
-						last_activity = yield from self['xep_0012'].get_last_activity(target)
+						last_activity = yield from self['xep_0012'].get_last_activity(jid=target, cached=False)
 						reply.append(LastActivity(last_activity, msg, target).format_values())
 
 					elif keyword == "!version":
-						version = yield from self['xep_0092'].get_version(target)
+						version = yield from self['xep_0092'].get_version(jid=target, cached=False)
 						reply.append(Version(version, msg, target).format_version())
 
 					elif keyword == "!contact":
@@ -155,7 +154,7 @@ class QueryBot(slixmpp.ClientXMPP):
 						reply.append(XEPRequest(msg, target).format())
 
 				except XMPPError as error:
-					reply.append(HandleError(error, msg, key, target).build_report())
+					reply.append(HandleError(error, msg, keyword, target).build_report())
 
 		# remove None type from list and send all elements
 		if list(filter(None.__ne__, reply)) and reply:
