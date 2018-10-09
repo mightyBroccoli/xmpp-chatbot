@@ -17,6 +17,7 @@ import logging
 from argparse import ArgumentParser
 from slixmpp.exceptions import XMPPError
 
+import common.misc as misc
 from common.strings import StaticAnswers
 from classes.functions import Version, LastActivity, ContactInfo, HandleError
 from classes.xep import XEPRequest
@@ -29,10 +30,16 @@ class QueryBot(slixmpp.ClientXMPP):
 		self.room = room
 		self.nick = nick
 
+		self.data = {
+			'words': list(),
+			'reply': list(),
+			'queue': list()
+		}
+
 		# session start event, starting point for the presence and roster requests
 		self.add_event_handler('session_start', self.start)
 
-		# register handler to recieve both groupchat and normal message events
+		# register recieve handler for both groupchat and normal message events
 		self.add_event_handler('message', self.message)
 
 	def start(self, event):
@@ -97,68 +104,68 @@ class QueryBot(slixmpp.ClientXMPP):
 
 		return reply_dedup
 
-	@asyncio.coroutine
-	def message(self, msg):
+	async def message(self, msg):
 		"""
 		:param msg: received message stanza
 		"""
-		# init empty reply list
-		reply = list()
+		data = self.data
 
 		# catch self messages to prevent self flooding
 		if msg['mucnick'] == self.nick:
 			return
+
 		elif self.nick in msg['body']:
 			# add pre predefined text to reply list
-			reply.append(StaticAnswers(msg['mucnick']).gen_answer())
+			data['reply'].append(StaticAnswers(msg['mucnick']).gen_answer())
 
 		# building the queue
 		# double splitting to exclude whitespaces
-		words = " ".join(msg['body'].split()).split(sep=" ")
-		queue = list()
+		data['words'] = " ".join(msg['body'].split()).split(sep=" ")
 
 		# check all words in side the message for possible hits
-		for x in enumerate(words):
+		for x in enumerate(data['words']):
 			# check word for match in keywords list
 			for y in StaticAnswers().keys(arg='list'):
-				# if so queue the keyword and the postion in the string
+				# if so queue the keyword and the position in the string
 				if x[1] == y:
 					# only add job to queue if domain is valid
-					if self.validate(words, x[0]):
-						queue.append({str(y): x[0]})
+					if misc.validate(data['words'], x[0]):
+						data['queue'].append({str(y): x[0]})
 
 		# queue
-		for job in queue:
+		for job in data['queue']:
 			for keyword in job:
 				index = job[keyword]
 
 				if keyword == '!help':
-					reply.append(StaticAnswers().gen_help())
+					data['reply'].append(StaticAnswers().gen_help())
 					continue
 
-				target = words[index + 1]
+				target = data['words'][index + 1]
 				try:
 					if keyword == '!uptime':
-						last_activity = yield from self['xep_0012'].get_last_activity(jid=target, cached=False)
-						reply.append(LastActivity(last_activity, msg, target).format_values())
+						last_activity = await self['xep_0012'].get_last_activity(jid=target)
+						self.data['reply'].append(LastActivity(last_activity, msg, target).format_values())
 
 					elif keyword == "!version":
-						version = yield from self['xep_0092'].get_version(jid=target, cached=False)
-						reply.append(Version(version, msg, target).format_version())
+						version = await self['xep_0092'].get_version(jid=target)
+						self.data['reply'].append(Version(version, msg, target).format_version())
+
 
 					elif keyword == "!contact":
-						contact = yield from self['xep_0030'].get_info(jid=target, cached=False)
-						reply.append(ContactInfo(contact, msg, target).format_contact())
+						last_activity = await self['xep_0012'].get_last_activity(jid=target)
+						self.data['reply'].append(LastActivity(last_activity, msg, target).format_values())
+
 
 					elif keyword == "!xep":
-						reply.append(XEPRequest(msg, target).format())
+						data['reply'].append(XEPRequest(msg, target).format())
 
 				except XMPPError as error:
-					reply.append(HandleError(error, msg, keyword, target).build_report())
+					data['reply'].append(HandleError(error, msg, keyword, target).build_report())
 
 		# remove None type from list and send all elements
-		if list(filter(None.__ne__, reply)) and reply:
-			reply = self.deduplicate(reply)
+		if list(filter(None.__ne__, data['reply'])) and data['reply']:
+			reply = misc.deduplicate(data['reply'])
 			self.send_message(mto=msg['from'].bare, mbody="\n".join(reply), mtype=msg['type'])
 
 
