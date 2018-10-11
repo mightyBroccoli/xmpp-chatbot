@@ -1,16 +1,14 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-	Slixmpp: The Slick XMPP Library
-	Copyright (C) 2010  Nathanael C. Fritz
-	This file is part of Slixmpp.
+	James the MagicXMPP Bot
+	build with Slick XMPP Library
+	Copyright (C) 2018 Nico Wellpott
 
 	See the file LICENSE for copying permission.
 """
-import asyncio
 import slixmpp
 import ssl
-import validators
 import configparser
 import logging
 
@@ -19,7 +17,9 @@ from slixmpp.exceptions import XMPPError
 
 import common.misc as misc
 from common.strings import StaticAnswers
-from classes.functions import Version, LastActivity, ContactInfo, HandleError
+from classes.functions import Version, ContactInfo, HandleError
+from classes.servercontact import ServerContact
+from classes.uptime import LastActivity
 from classes.xep import XEPRequest
 
 
@@ -39,7 +39,7 @@ class QueryBot(slixmpp.ClientXMPP):
 		# session start event, starting point for the presence and roster requests
 		self.add_event_handler('session_start', self.start)
 
-		# register recieve handler for both groupchat and normal message events
+		# register receive handler for both groupchat and normal message events
 		self.add_event_handler('message', self.message)
 
 	def start(self, event):
@@ -50,65 +50,19 @@ class QueryBot(slixmpp.ClientXMPP):
 		self.get_roster()
 
 		# If a room password is needed, use: password=the_room_password
-		for rooms in self.room.split(sep=","):
-			self.plugin['xep_0045'].join_muc(rooms, self.nick, wait=True)
-
-	def validate(self, wordlist, index):
-		"""
-		validation method to reduce malformed querys and unnecessary connection attempts
-		:param wordlist: words separated by " " from the message
-		:param index: keyword index inside the message
-		:return: true if valid
-		"""
-		# keyword inside the message
-		argument = wordlist[index]
-
-		# check if argument is in the argument list
-		if argument in StaticAnswers().keys(arg='list'):
-			# if argument uses a domain check for occurence in list and check domain
-			if argument in StaticAnswers().keys(arg='list', keyword='domain_keywords'):
-				try:
-					target = wordlist[index + 1]
-					if validators.domain(target):
-						return True
-				except IndexError:
-					# except an IndexError if a keywords is the last word in the message
-					return False
-
-			# check if number keyword is used if true check if target is assignable
-			elif argument in StaticAnswers().keys(arg='list', keyword='number_keywords'):
-				try:
-					if wordlist[index + 1]:
-						return True
-				except IndexError:
-					# except an IndexError if target is not assignable
-					return False
-			# check if argument is inside no_arg list
-			elif argument in StaticAnswers().keys(arg='list', keyword="no_arg_keywords"):
-				return True
-			else:
-				return False
-		else:
-			return False
-
-	def deduplicate(self, reply):
-		"""
-		deduplication method for the result list
-		:param list reply: list containing strings
-		:return: list containing unique strings
-		"""
-		reply_dedup = list()
-		for item in reply:
-			if item not in reply_dedup:
-				reply_dedup.append(item)
-
-		return reply_dedup
+		if self.room:
+			for rooms in self.room.split(sep=","):
+				self.plugin['xep_0045'].join_muc(rooms, self.nick, wait=True)
 
 	async def message(self, msg):
 		"""
 		:param msg: received message stanza
 		"""
-		data = self.data
+		data = {
+			'words': list(),
+			'reply': list(),
+			'queue': list()
+		}
 
 		# catch self messages to prevent self flooding
 		if msg['mucnick'] == self.nick:
@@ -144,18 +98,18 @@ class QueryBot(slixmpp.ClientXMPP):
 				target = data['words'][index + 1]
 				try:
 					if keyword == '!uptime':
-						last_activity = await self['xep_0012'].get_last_activity(jid=target)
-						self.data['reply'].append(LastActivity(last_activity, msg, target).format_values())
+						data['reply'].append(LastActivity(self, msg, target).format_values())
+
+						#last_activity = await self['xep_0012'].get_last_activity(jid=target)
+						#data['reply'].append(LastActivity(last_activity, msg, target).format_values())
 
 					elif keyword == "!version":
 						version = await self['xep_0092'].get_version(jid=target)
-						self.data['reply'].append(Version(version, msg, target).format_version())
-
+						data['reply'].append(Version(version, msg, target).format_version())
 
 					elif keyword == "!contact":
-						last_activity = await self['xep_0012'].get_last_activity(jid=target)
-						self.data['reply'].append(LastActivity(last_activity, msg, target).format_values())
-
+						contact = await self['xep_0030'].get_info(jid=target, cached=False)
+						data['reply'].append(ServerContact(contact, msg, target).format_contact())
 
 					elif keyword == "!xep":
 						data['reply'].append(XEPRequest(msg, target).format())
