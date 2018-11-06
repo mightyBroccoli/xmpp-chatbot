@@ -60,6 +60,7 @@ class QueryBot(slixmpp.ClientXMPP):
 		# If a room password is needed, use: password=the_room_password
 		if self.room:
 			for rooms in self.room.split(sep=","):
+				logging.debug("joining: %s" % rooms)
 				self.plugin['xep_0045'].join_muc(rooms, self.nick, wait=True)
 
 	async def message(self, msg):
@@ -106,7 +107,7 @@ class QueryBot(slixmpp.ClientXMPP):
 					query = await self['xep_0030'].get_info(jid=target, cached=False)
 
 			except XMPPError as error:
-				logging.INFO(misc.HandleError(error, keyword, target).report())
+				logging.info(misc.HandleError(error, keyword, target).report())
 				data['reply'].append(misc.HandleError(error, keyword, target).report())
 				continue
 

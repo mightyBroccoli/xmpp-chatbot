@@ -1,8 +1,7 @@
-#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 import os
 import requests
-import defusedxml.ElementTree as et
+import defusedxml.ElementTree as Et
 
 
 class XEPRequest:
@@ -36,12 +35,12 @@ class XEPRequest:
 			# compare etag with local_etag if they match up no request is made
 			if local_etag == etag:
 				with open("./common/xeplist.xml", "r") as file:
-					self.xeplist = et.fromstring(file.read())
+					self.xeplist = Et.fromstring(file.read())
 
 			# if the connection is not possible use cached xml if present
 			elif os.path.isfile("./common/xeplist.xml") and head.status_code != 200:
 				with open("./common/xeplist.xml", "r") as file:
-					self.xeplist = et.fromstring(file.read())
+					self.xeplist = Et.fromstring(file.read())
 
 			# in any other case request the latest xml
 			else:
@@ -51,7 +50,7 @@ class XEPRequest:
 
 				with open("./common/xeplist.xml", "w") as file:
 					file.write(r.content.decode())
-					self.xeplist = et.fromstring(r.content.decode())
+					self.xeplist = Et.fromstring(r.content.decode())
 
 				with open('./common/.etag', 'w') as string:
 					string.write(local_etag)

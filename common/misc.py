@@ -57,13 +57,13 @@ class HandleError:
 	"""
 	def __init__(self, error, key, target):
 		# init all necessary variables
-		self.error = error
+		self.text = error.text
+		self.condition = error.condition
 		self.key = key
 		self.target = target
 
 	def report(self):
 		# return the formatted result string to the user
-		condition = self.error.condition
-		text = "There was an error requesting %s's %s : %s" % (self.target, self.key, condition)
+		text = "%s, %s resulted in: %s" % (self.text, self.key, self.condition)
 
 		return text
