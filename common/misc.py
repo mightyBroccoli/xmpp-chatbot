@@ -17,43 +17,53 @@ def deduplicate(reply):
 	return reply_dedup
 
 
-def validate(wordlist, index):
+def validate(keyword, target):
 	"""
 	validation method to reduce malformed querys and unnecessary connection attempts
-	:param wordlist: words separated by " " from the message
-	:param index: keyword index inside the message
+	:param keyword: used keyword
+	:param target: provided target
 	:return: true if valid
 	"""
-	# keyword inside the message
-	argument = wordlist[index]
+	# check if keyword is in the argument list
+	if keyword in StaticAnswers().keys():
 
-	# check if argument is in the argument list
-	if argument in StaticAnswers().keys(arg='list'):
-		# if argument uses a domain check for occurrence in list and check domain
-		if argument in StaticAnswers().keys(arg='list', keyword='domain_keywords'):
-			try:
-				target = wordlist[index + 1]
-				if validators.domain(target):
-					return True
-				elif validators.email(target):
-					return True
+		# if keyword in domain_keywords list
+		if keyword in StaticAnswers().keys('domain_keywords'):
+			# if target is a domain / email return True
+			if validators.domain(target):
+				return True
+			elif validators.email(target):
+				return True
 
-			except IndexError:
-				# except an IndexError if a keywords is the last word in the message
-				return False
+		# check if keyword is in number_keyword list
+		elif keyword in StaticAnswers().keys('number_keywords'):
+			# if target only consists of digits return True
+			if target.isdigit():
+				return True
 
-		# check if number keyword is used if true check if target is assignable
-		elif argument in StaticAnswers().keys(arg='list', keyword='number_keywords'):
-			try:
-				if wordlist[index + 1]:
-					return True
-			except IndexError:
-				# except an IndexError if target is not assignable
-				return False
-		# check if argument is inside no_arg list
-		elif argument in StaticAnswers().keys(arg='list', keyword="no_arg_keywords"):
+		# if keyword is in no_arg_keywords list return True
+		elif keyword in StaticAnswers().keys("no_arg_keywords"):
 			return True
-		else:
-			return False
+
+	# if the target could not be validated until this return False
 	else:
 		return False
+
+
+#
+class HandleError:
+	"""
+	simple XMPP error / exception class formating the error condition
+	"""
+	def __init__(self, error, key, target):
+		# init all necessary variables
+		self.error = error
+		self.key = key
+		self.target = target
+
+	def report(self):
+		# return the formatted result string to the user
+		condition = self.error.condition
+		text = "There was an error requesting %s's %s : %s" % (self.target, self.key, condition)
+
+		return text

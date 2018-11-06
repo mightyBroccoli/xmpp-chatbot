@@ -29,14 +29,13 @@ class StaticAnswers:
 			"number_keywords": ["!xep"]
 		}
 
-	def keys(self, arg="", keyword='keywords'):
-		if arg == 'list':
-			try:
-				return self.keywords[keyword]
-			except KeyError:
-				return self.keywords['keywords']
+	def keys(self, key=""):
+		# if specific keyword in referenced return that
+		if key in self.keywords.keys():
+			return self.keywords[key]
+		# in any other case return the whole dict
 		else:
-			return self.keywords
+			return self.keywords["keywords"]
 
 	def gen_help(self):
 		helpdoc = "\n".join(['%s' % value for (_, value) in self.helpfile.items()])

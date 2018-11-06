@@ -3,23 +3,19 @@
 
 # XEP-0012: Last Activity
 class LastActivity:
-	""" query the server uptime of the specified domain, defined by XEP-0012 """
-	def __init__(self, session, msg, target):
-		self.session = session
-		self.nick = msg['mucnick']
-		self.message_type = msg['type']
-		self.target = target
+	"""
+	query the server uptime of the specified domain, defined by XEP-0012
+	"""
+	def __init__(self):
+		# init all necessary variables
+		self.last_activity = None
+		self.target, self.opt_arg = None, None
 
-	async def query(self):
-		last_activity = await self.session['xep_0012'].get_last_activity(jid=self.target)
-		seconds = await last_activity['last_activity']['seconds']
-
-		return seconds
-
-	async def format_values(self, granularity=4):
-		seconds = await self.query()
-		#seconds = last_activity['last_activity']['seconds']
+	def process(self, granularity=4):
+		seconds = self.last_activity['last_activity']['seconds']
 		uptime = []
+
+		# touple with displayable time sections
 		intervals = (
 			('years', 31536000),  # 60 * 60 * 24 * 365
 			('weeks', 604800),  # 60 * 60 * 24 * 7
@@ -28,6 +24,8 @@ class LastActivity:
 			('minutes', 60),
 			('seconds', 1)
 		)
+
+		# for every element in possible time section process the seconds
 		for name, count in intervals:
 			value = seconds // count
 			if value:
@@ -37,9 +35,16 @@ class LastActivity:
 				uptime.append("{} {}".format(value, name))
 		result = ' '.join(uptime[:granularity])
 
-		if self.message_type == "groupchat":
-			text = "%s: %s is running since %s" % (self.nick, self.target, result)
-		else:
-			text = "%s is running since %s" % (self.target, result)
+		# insert values into result string
+		text = "%s is running since %s" % (self.target, result)
 
 		return text
+
+	def format(self, query, target, opt_arg):
+		self.last_activity = query
+
+		self.target = target
+		self.opt_arg = opt_arg
+
+		reply = self.process()
+		return reply

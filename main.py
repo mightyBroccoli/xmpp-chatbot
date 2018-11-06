@@ -17,8 +17,8 @@ from slixmpp.exceptions import XMPPError
 
 import common.misc as misc
 from common.strings import StaticAnswers
-from classes.functions import Version, ContactInfo, HandleError
 from classes.servercontact import ServerContact
+from classes.version import Version
 from classes.uptime import LastActivity
 from classes.xep import XEPRequest
 
@@ -29,6 +29,14 @@ class QueryBot(slixmpp.ClientXMPP):
 		self.ssl_version = ssl.PROTOCOL_TLSv1_2
 		self.room = room
 		self.nick = nick
+		self.use_message_ids = True
+
+		self.functions = {
+			"!uptime": LastActivity(),
+			"!contact": ServerContact(),
+			"!version": Version(),
+			"!xep": XEPRequest()
+		}
 
 		self.data = {
 			'words': list(),
@@ -72,55 +80,87 @@ class QueryBot(slixmpp.ClientXMPP):
 			# add pre predefined text to reply list
 			data['reply'].append(StaticAnswers(msg['mucnick']).gen_answer())
 
-		# building the queue
-		# double splitting to exclude whitespaces
-		data['words'] = " ".join(msg['body'].split()).split(sep=" ")
-
-		# check all words in side the message for possible hits
-		for x in enumerate(data['words']):
-			# check word for match in keywords list
-			for y in StaticAnswers().keys(arg='list'):
-				# if so queue the keyword and the position in the string
-				if x[1] == y:
-					# only add job to queue if domain is valid
-					if misc.validate(data['words'], x[0]):
-						data['queue'].append({str(y): x[0]})
+		data = self.build_queue(data, msg)
 
 		# queue
 		for job in data['queue']:
-			for keyword in job:
-				index = job[keyword]
+			keys = list(job.keys())
+			keyword = keys[0]
 
-				if keyword == '!help':
-					data['reply'].append(StaticAnswers().gen_help())
-					continue
+			target = job[keyword][0]
+			opt_arg = job[keyword][1]
+			query = None
 
-				target = data['words'][index + 1]
-				try:
-					if keyword == '!uptime':
-						data['reply'].append(LastActivity(self, msg, target).format_values())
+			if keyword == '!help':
+				data['reply'].append(StaticAnswers().gen_help())
+				continue
 
-						#last_activity = await self['xep_0012'].get_last_activity(jid=target)
-						#data['reply'].append(LastActivity(last_activity, msg, target).format_values())
+			try:
+				if keyword == "!uptime":
+					query = await self['xep_0012'].get_last_activity(jid=target)
 
-					elif keyword == "!version":
-						version = await self['xep_0092'].get_version(jid=target)
-						data['reply'].append(Version(version, msg, target).format_version())
+				elif keyword == "!version":
+					query = await self['xep_0092'].get_version(jid=target)
 
-					elif keyword == "!contact":
-						contact = await self['xep_0030'].get_info(jid=target, cached=False)
-						data['reply'].append(ServerContact(contact, msg, target).format_contact())
+				elif keyword == "!contact":
+					query = await self['xep_0030'].get_info(jid=target, cached=False)
 
-					elif keyword == "!xep":
-						data['reply'].append(XEPRequest(msg, target).format())
+			except XMPPError as error:
+				logging.INFO(misc.HandleError(error, keyword, target).report())
+				data['reply'].append(misc.HandleError(error, keyword, target).report())
+				continue
 
-				except XMPPError as error:
-					data['reply'].append(HandleError(error, msg, keyword, target).build_report())
+			data["reply"].append(self.functions[keyword].format(query=query, target=target, opt_arg=opt_arg))
 
 		# remove None type from list and send all elements
 		if list(filter(None.__ne__, data['reply'])) and data['reply']:
-			reply = misc.deduplicate(data['reply'])
+
+			# if msg type is groupchat prepend mucnick
+			if msg["type"] == "groupchat":
+				data["reply"][0] = "%s: " % msg["mucnick"] + data["reply"][0]
+
+			# reply = misc.deduplicate(data['reply'])
+			reply = data["reply"]
 			self.send_message(mto=msg['from'].bare, mbody="\n".join(reply), mtype=msg['type'])
+
+	def build_queue(self, data, msg):
+		# building the queue
+		# double splitting to exclude whitespaces
+		data['words'] = " ".join(msg['body'].split()).split(sep=" ")
+		wordcount = len(data["words"])
+
+		# check all words in side the message for possible hits
+		for x in enumerate(data['words']):
+			# check for valid keywords
+			index = x[0]
+			keyword = x[1]
+
+			# match all words starting with ! and member of no_arg_keywords
+			if keyword.startswith("!") and keyword in StaticAnswers().keys("no_arg_keywords"):
+				data['queue'].append({keyword: [None, None]})
+
+			# matching all words starting with ! and member of keywords
+			elif keyword.startswith("!") and keyword in StaticAnswers().keys("keywords"):
+				# init variables to circumvent IndexErrors
+				target, opt_arg = None, None
+
+				# compare to wordcount if assignment is possible
+				if index + 1 < wordcount:
+					target = data["words"][index + 1]
+
+				if index + 2 < wordcount:
+					if not data["words"][index + 2].startswith("!"):
+						opt_arg = data["words"][index + 2]
+
+				# only add job to queue if domain is valid
+				if misc.validate(keyword, target):
+					logging.debug("Item added to queue %s" % {str(keyword): [target, opt_arg]})
+					data['queue'].append({str(keyword): [target, opt_arg]})
+
+		# deduplicate queue elements
+		data["queue"] = misc.deduplicate(data["queue"])
+
+		return data
 
 
 if __name__ == '__main__':
@@ -130,12 +170,12 @@ if __name__ == '__main__':
 						const=logging.ERROR, default=logging.INFO)
 	parser.add_argument('-d', '--debug', help='set logging to DEBUG', action='store_const', dest='loglevel',
 						const=logging.DEBUG, default=logging.INFO)
-	parser.add_argument('-D', '--dev', help='set logging to console', action='store_const', dest='logfile', const="",
-						default='bot.log')
+	parser.add_argument('-D', '--dev', help='set logging to console', action='store_const', dest='logfile',
+						const="", default='bot.log')
 	args = parser.parse_args()
 
 	# logging
-	logging.basicConfig(filename=args.logfile, level=args.loglevel, format='%(levelname)-8s %(message)s')
+	logging.basicConfig(filename=args.logfile, level=logging.INFO, format='%(levelname)-8s %(message)s')
 	logger = logging.getLogger(__name__)
 
 	# configfile
