@@ -64,6 +64,6 @@ class HandleError:
 
 	def report(self):
 		# return the formatted result string to the user
-		text = "%s, %s resulted in: %s" % (self.text, self.key, self.condition)
+		text = "%s. %s %s resulted in: %s" % (self.text, self.key, self.target, self.condition)
 
 		return text

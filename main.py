@@ -176,7 +176,7 @@ if __name__ == '__main__':
 	args = parser.parse_args()
 
 	# logging
-	logging.basicConfig(filename=args.logfile, level=logging.INFO, format='%(levelname)-8s %(message)s')
+	logging.basicConfig(filename=args.logfile, level=logging.INFO, format='%(levelname)s: %(asctime)s: %(message)s')
 	logger = logging.getLogger(__name__)
 
 	# configfile
