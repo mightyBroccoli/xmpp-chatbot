@@ -66,7 +66,7 @@ class XEPRequest:
 		"""
 		# all possible subtags grouped by location
 		last_revision_tags = ["date", "version", "initials", "remark"]
-		xep_tags = ["number", "title", "abstract", "type", "status", "approver", "shortname", "sig", "lastcall"]
+		xep_tags = ["number", "title", "abstract", "type", "status", "approver", "shortname", "sig", "lastcall", "date", "version", "initials", "remark"]
 
 		# check if xeplist is accurate
 		self.req_xeplist()
@@ -75,28 +75,28 @@ class XEPRequest:
 		# if requested number is member of acceptedxeps continue
 		if str(self.reqxep) in self.acceptedxeps:
 			searchstring = ".//*[@accepted='true']/[number='%s']" % self.reqxep
-			query = None
 
 			for item in self.xeplist.findall(searchstring):
 				# if the opt_arg references is member of xeptag return only that tag
 				if self.opt_arg in xep_tags:
-					query = item.find(self.opt_arg)
 
-				# if the opt_arg references is member of last-revision_tags return only that tag
-				elif self.opt_arg in last_revision_tags:
-					query = item.find("last-revision").find(self.opt_arg)
+					# if the opt_arg references is member of last_revision_tags return only that subtag
+					if self.opt_arg in last_revision_tags:
+						query = item.find("last-revision").find(self.opt_arg)
+					else:
+						query = item.find(self.opt_arg)
+
+					# append opt_arg results to the result list
+					if query is not None:
+						result.append("%s : %s" % (query.tag, query.text))
+					else:
+						result.append("%s does not have a %s tag." % (self.reqxep, self.opt_arg))
 
 				# in any other case return the general answer
 				else:
 					result_opts = ["title", "type", "abstract", "status"]
 					for tag in result_opts:
 						result.append(item.find(tag).text)
-
-				# append opt_arg results to the result list
-				if query is not None:
-					result.append("%s : %s" % (query.tag, query.text))
-				else:
-					result.append("%s does not have a %s tag." % (self.reqxep, self.opt_arg))
 
 		# if the requested number is no member of acceptedxeps and/or not accepted return error.
 		else:
