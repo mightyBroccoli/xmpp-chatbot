@@ -19,7 +19,27 @@ class ServerContact:
 		self.contact = None
 		self.target, self.opt_arg = None, None
 
+	def opt_arg_abbreviation(self):
+		"""
+		optional argument abbreviation function
+		if the provided string > 2 characters the most likely key will be chosen
+		:return: completes the opt_arg to the most likely one
+		"""
+		# if opt_argument is smaller then 2 pass to prohibit multiple answers
+		if len(self.opt_arg) < 2:
+			pass
+
+		abbr = str(self.opt_arg)
+		possible_abbr = ["abuse-addresses", "admin-addresses", "feedback-addresses", "sales-addresses",
+			"security-addresses", "support-addresses"]
+
+		# searches the best match in the list of possible_abbr and completes the opt_arg to that
+		self.opt_arg = [s for s in possible_abbr if s.startswith(abbr)][0]
+
 	def process(self):
+		# optional argument abbreviation
+		self.opt_arg_abbreviation()
+
 		# get etree from base xml
 		iq = Et.fromstring(str(self.contact))
 
@@ -70,7 +90,7 @@ class ServerContact:
 			text = "contact addresses for %s are\n" % self.target
 
 			# if opt_arg is present and member of possible_vars change text line
-			if opt_arg in self.possible_vars:
+			if self.opt_arg in self.possible_vars:
 				text = "%s for %s are\n" % (self.opt_arg, self.target)
 
 			for key in result.keys():
@@ -80,7 +100,7 @@ class ServerContact:
 			text = "%s has no contact addresses configured." % self.target
 
 			# if opt_arg is present and member of possible_vars but the key is empty change text line
-			if opt_arg in self.possible_vars:
+			if self.opt_arg in self.possible_vars:
 				text = "%s for %s are not defined." % (self.opt_arg, self.target)
 
 		return text
