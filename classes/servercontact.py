@@ -34,11 +34,11 @@ class ServerContact:
 			# extract jabber:x:data from query
 			xdata = query.findall('{jabber:x:data}x')
 
-			# check for multiple x nodes
-			for x in range(len(xdata)):
+			# iterate over all nodes with the xdata tag
+			for node in xdata:
 
-				# iterate over all x nodes
-				for child in xdata[x]:
+				# iterate over all child elements in node
+				for child in node:
 
 					# if one opt_arg is defined return just that one
 					if self.opt_arg in self.possible_vars:

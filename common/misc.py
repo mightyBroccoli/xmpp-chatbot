@@ -46,8 +46,7 @@ def validate(keyword, target):
 			return True
 
 	# if the target could not be validated until this return False
-	else:
-		return False
+	return False
 
 
 #

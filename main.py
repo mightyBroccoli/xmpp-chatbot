@@ -38,12 +38,6 @@ class QueryBot(slixmpp.ClientXMPP):
 			"!xep": XEPRequest()
 		}
 
-		self.data = {
-			'words': list(),
-			'reply': list(),
-			'queue': list()
-		}
-
 		# session start event, starting point for the presence and roster requests
 		self.add_event_handler('session_start', self.start)
 
