@@ -13,11 +13,13 @@ class StaticAnswers:
 			'version':	'!version domain.tld  -- receive XMPP server version',
 			'uptime':	'!uptime domain.tld -- receive XMPP server uptime',
 			'contact':	'!contact domain.tld -- receive XMPP server contact address info',
-			'xep': 		'!xep XEP Number -- recieve information about the specified XEP'}
+			'xep': 		'!xep XEP Number -- recieve information about the specified XEP'
+		}
 		self.possible_answers = {
 			'1': 'I heard that, %s.',
 			'2': 'I am sorry for that %s.',
-			'3': '%s did you try turning it off and on again?'}
+			'3': '%s did you try turning it off and on again?'
+		}
 		self.error_messages = {
 			'1': 'not reachable',
 			'2': 'not a valid target'
