@@ -60,6 +60,6 @@ target/
 
 # .idea
 .idea
-.etag
 bot\.cfg
-xeplist.xml
+common/xeplist.xml
+common/.etag
