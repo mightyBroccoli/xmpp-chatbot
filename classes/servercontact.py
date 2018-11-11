@@ -37,9 +37,6 @@ class ServerContact:
 		self.opt_arg = [s for s in possible_abbr if s.startswith(abbr)][0]
 
 	def process(self):
-		# optional argument abbreviation
-		self.opt_arg_abbreviation()
-
 		# get etree from base xml
 		iq = Et.fromstring(str(self.contact))
 
@@ -62,6 +59,9 @@ class ServerContact:
 
 					# if one opt_arg is defined return just that one
 					if self.opt_arg in self.possible_vars:
+						# check for possible abbreviations to the optional argument
+						self.opt_arg_abbreviation()
+
 						if child.attrib['var'] == self.opt_arg:
 							# add section to result dict and append info
 							result[child.attrib['var']] = list()
