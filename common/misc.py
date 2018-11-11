@@ -32,8 +32,10 @@ def validate(keyword, target):
 
 	# check if keyword is in number_keyword list
 	elif keyword in StaticAnswers().keys('number_keywords'):
-		# if target only consists of digits return True
-		return target.isdigit()
+		# prevent AttributeError if target is NoneType
+		if target is not None:
+			# if target only consists of digits return True
+			return target.isdigit()
 
 	# if keyword is in no_arg_keywords list return True
 	elif keyword in StaticAnswers().keys("no_arg_keywords"):
