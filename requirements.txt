@@ -1,4 +1,4 @@
-slixmpp>=1.2.2
+slixmpp>=1.7.1
 defusedxml>=0.5.0
 requests>=2.19.1
 validators>=0.12.2

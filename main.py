@@ -55,7 +55,10 @@ class QueryBot(slixmpp.ClientXMPP):
 		if self.room:
 			for rooms in self.room.split(sep=","):
 				logging.debug("joining: %s" % rooms)
-				self.plugin['xep_0045'].join_muc(rooms, self.nick, wait=True)
+				# join_muc will be deprecated in slixmpp 1.8.0
+				# see https://slixmpp.readthedocs.io/en/latest/api/plugins/xep_0045.html?highlight=join_muc_wait#slixmpp.plugins.xep_0045.XEP_0045.join_muc_wait
+				# self.plugin['xep_0045'].join_muc_wait(rooms, self.nick, maxstanzas=0)
+				self.plugin['xep_0045'].join_muc(rooms, self.nick)
 
 	async def message(self, msg):
 		"""

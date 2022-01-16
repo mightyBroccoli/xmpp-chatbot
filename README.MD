@@ -42,4 +42,4 @@ Copy the systemd dummy file into systemd service folder.
 If it is neccecary to start the bot automatically when the system boots do `systemctl enable magicbot.service`.
 
 #### starting the bot without systemd
-Got to the bots directory and run `./main.py &`.
+Go to the bots directory and run `./main.py &`.
